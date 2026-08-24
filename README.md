@@ -69,7 +69,13 @@ During a scheduled window it logs off and disables only that child account. Outs
 
 **Use the verified release workflow in [`SAFE-INSTALL.md`](SAFE-INSTALL.md).** Do not use remote PowerShell `IEX` installers, shortened URLs, execution-policy bypasses, or Defender exclusions.
 
-After downloading the release ZIP, verifying its SHA-256, extracting it, and unblocking the reviewed local scripts as documented there, open **Windows PowerShell as Administrator**, change to the extracted project folder, then run:
+After downloading the release ZIP, verifying its SHA-256, extracting it, and unblocking the reviewed local scripts as documented there, open **Windows PowerShell as Administrator** and explicitly configure the machine's script policy required by the visible `LocalSystem` tasks:
+
+```powershell
+Set-ExecutionPolicy -Scope LocalMachine -ExecutionPolicy RemoteSigned
+```
+
+Then change to the extracted project folder and run:
 
 ```powershell
 .\scripts\Install-GuardianPawsDirectBot.ps1 -ChildUserName GuardianChild -DisplayName 'Child account' -ExtensionUpdateUrl 'https://guard.catbiologymc.com/guardian-paws/update.xml'
@@ -102,11 +108,10 @@ The keyboard button is intentional: Telegram delivers `WebApp.sendData()` action
 
 ### Upgrade an existing direct-bot installation
 
-Copy the updated project folder to the Windows PC, then run this from an elevated PowerShell window:
+Copy the updated project folder to the Windows PC, ensure the explicit `LocalMachine` `RemoteSigned` policy described above is still in place, then run this from an elevated PowerShell window:
 
 ```powershell
-Set-ExecutionPolicy -Scope Process Bypass
-.\scripts\Update-GuardianPawsDirectBot.ps1
+.\scripts\Update-GuardianPawsDirectBot.ps1 -ExtensionUpdateUrl 'https://guard.catbiologymc.com/guardian-paws/update.xml'
 ```
 
 It preserves the paired guardians and protected bot token, updates the local scripts, registers the Mini App URL (`https://guard.catbiologymc.com/guardian` by default), and restarts the direct-bot task.

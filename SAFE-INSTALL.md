@@ -30,7 +30,13 @@ That delivery method is revoked. It was flagged by Microsoft Defender and is not
    Set-Location "$env:USERPROFILE\Downloads\GuardianPaws-Windows-v1.0.0"
    Unblock-File .\scripts\*.ps1
    ```
-4. Review `README.md` and the scripts. Then install explicitly:
+4. Review `README.md` and the scripts. Guardian Paws deliberately does not use an execution-policy bypass; its visible LocalSystem tasks require this explicit machine-wide policy choice in the elevated PowerShell window:
+
+   ```powershell
+   Set-ExecutionPolicy -Scope LocalMachine -ExecutionPolicy RemoteSigned
+   ```
+
+   Then install explicitly:
 
    ```powershell
    .\scripts\Install-GuardianPawsDirectBot.ps1 -ChildUserName GuardianChild -DisplayName 'Child account' -ExtensionUpdateUrl 'https://guard.catbiologymc.com/guardian-paws/update.xml'

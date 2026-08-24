@@ -89,9 +89,18 @@ function Save-GuardianPawsState {
     Move-Item -LiteralPath $temporary -Destination $Path -Force
 }
 
+function Import-GuardianPawsDpapi {
+    [CmdletBinding()]
+    param()
+    # Windows PowerShell 5.1 does not always load the System.Security assembly
+    # that defines DPAPI's ProtectedData type until it is explicitly requested.
+    Add-Type -AssemblyName 'System.Security' -ErrorAction Stop
+}
+
 function Get-GuardianPawsMachineSecret {
     [CmdletBinding()]
     param([Parameter(Mandatory)][string]$ProtectedBase64)
+    Import-GuardianPawsDpapi
     $protected = [Convert]::FromBase64String($ProtectedBase64)
     $plain = [Security.Cryptography.ProtectedData]::Unprotect($protected, $null, [Security.Cryptography.DataProtectionScope]::LocalMachine)
     return [Text.Encoding]::UTF8.GetString($plain)
@@ -100,6 +109,7 @@ function Get-GuardianPawsMachineSecret {
 function Protect-GuardianPawsMachineSecret {
     [CmdletBinding()]
     param([Parameter(Mandatory)][securestring]$Secret)
+    Import-GuardianPawsDpapi
     $pointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($Secret)
     try {
         $plainText = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($pointer)

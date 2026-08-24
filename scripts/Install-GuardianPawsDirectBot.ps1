@@ -19,6 +19,11 @@ $ErrorActionPreference = 'Stop'
 $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
 $principal = [Security.Principal.WindowsPrincipal]::new($identity)
 if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) { throw 'Run this setup from PowerShell opened with Run as administrator.' }
+$machinePolicy = Get-ExecutionPolicy -Scope MachinePolicy
+$localMachinePolicy = Get-ExecutionPolicy -Scope LocalMachine
+if (($machinePolicy -ne 'Undefined' -and $machinePolicy -ne 'RemoteSigned') -or ($machinePolicy -eq 'Undefined' -and $localMachinePolicy -ne 'RemoteSigned')) {
+    throw 'Guardian Paws does not use an execution-policy bypass. Its visible background tasks require the machine policy to be explicitly RemoteSigned. In an elevated PowerShell window run: Set-ExecutionPolicy -Scope LocalMachine -ExecutionPolicy RemoteSigned, then re-run this installer.'
+}
 if ($ChildUserName.Length -lt 1 -or $ChildUserName.Length -gt 20 -or $ChildUserName -match '[<>:"/\\|?*\[\];=,+\s]' -or $ChildUserName -in @('Administrator', 'DefaultAccount', 'Guest', 'WDAGUtilityAccount')) { throw 'Use a new 1–20 character child username without spaces/reserved characters or a built-in account name.' }
 $existingChild = Get-LocalUser -Name $ChildUserName -ErrorAction SilentlyContinue
 if ($existingChild -and $existingChild.Description -ne 'Guardian Paws standard child account') { throw "'$ChildUserName' already exists and is not an incomplete Guardian Paws child account. Refusing to modify it." }
@@ -43,6 +48,7 @@ $app = Join-Path $root 'app'
 New-Item -ItemType Directory -Force -Path $app | Out-Null
 Copy-Item -Path (Join-Path $projectRoot 'src') -Destination $app -Recurse -Force
 Copy-Item -Path (Join-Path $projectRoot 'scripts') -Destination $app -Recurse -Force
+Unblock-File -Path (Join-Path $app 'scripts/*.ps1')
 Import-Module (Join-Path $app 'src/GuardianPaws.DirectBot.psm1') -Force
 
 $bytes = New-Object byte[] 4
@@ -73,20 +79,23 @@ $childIdentity = "$env:COMPUTERNAME\$ChildUserName"
 & icacls $configPath /inheritance:r /grant:r 'SYSTEM:F' 'Administrators:F' | Out-Null
 & icacls $statePath /inheritance:r /grant:r 'SYSTEM:F' 'Administrators:F' "$childIdentity`:R" | Out-Null
 
-$botAction = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$app\scripts\GuardianPaws.DirectBot.ps1`""
+$botAction = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -File `"$app\scripts\GuardianPaws.DirectBot.ps1`""
 $botTrigger = New-ScheduledTaskTrigger -AtStartup
 $system = New-ScheduledTaskPrincipal -UserId 'SYSTEM' -LogonType ServiceAccount -RunLevel Highest
 $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1)
 Register-ScheduledTask -TaskName 'GuardianPaws-DirectBot' -TaskPath '\GuardianPaws\' -Action $botAction -Trigger $botTrigger -Principal $system -Settings $settings -Force | Out-Null
 
-$agentAction = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$app\scripts\GuardianPaws.ChildAgent.ps1`" -StatePath `"$statePath`" -ExtensionUpdateUrl `"$ExtensionUpdateUrl`""
+$agentAction = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -File `"$app\scripts\GuardianPaws.ChildAgent.ps1`" -StatePath `"$statePath`" -ExtensionUpdateUrl `"$ExtensionUpdateUrl`""
 $agentTrigger = New-ScheduledTaskTrigger -AtLogOn -User $childIdentity
 $childPrincipal = New-ScheduledTaskPrincipal -UserId $childIdentity -LogonType Interactive -RunLevel Limited
 Register-ScheduledTask -TaskName 'GuardianPaws-ChildAgent' -TaskPath '\GuardianPaws\' -Action $agentAction -Trigger $agentTrigger -Principal $childPrincipal -Settings (New-ScheduledTaskSettingsSet -StartWhenAvailable) -Force | Out-Null
 
 # This normal Task Scheduler entry is deliberately visible. It runs once per minute as SYSTEM.
-$enforcerAction = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$app\scripts\GuardianPaws.Enforcer.ps1`""
-$enforcerTrigger = New-ScheduledTaskTrigger -Daily -At '12:00AM' -DaysInterval 1 -RepetitionInterval (New-TimeSpan -Minutes 1) -RepetitionDuration (New-TimeSpan -Days 1)
+$enforcerAction = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -File `"$app\scripts\GuardianPaws.Enforcer.ps1`""
+$enforcerTrigger = New-ScheduledTaskTrigger -Daily -At '12:00AM' -DaysInterval 1
+$enforcerTrigger.Repetition.Interval = 'PT1M'
+$enforcerTrigger.Repetition.Duration = 'P1D'
+$enforcerTrigger.Repetition.StopAtDurationEnd = $false
 Register-ScheduledTask -TaskName 'GuardianPaws-Enforcer' -TaskPath '\GuardianPaws\' -Description 'Guardian Paws visible child-account downtime and app-limit enforcer (runs every minute).' -Action $enforcerAction -Trigger $enforcerTrigger -Principal $system -Settings (New-ScheduledTaskSettingsSet -StartWhenAvailable -MultipleInstances IgnoreNew) -Force | Out-Null
 
 Start-ScheduledTask -TaskPath '\GuardianPaws\' -TaskName 'GuardianPaws-DirectBot'
