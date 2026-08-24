@@ -1,0 +1,9 @@
+# Never publish extension signing material or build/test leftovers.
+extension.pem
+extension.crx
+testResults.xml
+*.tmp
+
+# Revoked remote bootstrap launchers are intentionally not shipped.
+scripts/Install-GuardianPawsFromGist.ps1
+scripts/Install-GuardianPaws.cmd

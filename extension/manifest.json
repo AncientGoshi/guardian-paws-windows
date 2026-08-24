@@ -1,0 +1,12 @@
+{
+  "manifest_version": 3,
+  "name": "Guardian Paws — Child Screen Time",
+  "version": "1.0.0",
+  "description": "Visible child-account website screen-time limits managed by Guardian Paws.",
+  "permissions": ["tabs", "storage", "alarms", "declarativeNetRequest"],
+  "background": { "service_worker": "service-worker.js", "type": "module" },
+  "storage": { "managed_schema": "managed-schema.json" },
+  "action": { "default_title": "Guardian Paws — Child Screen Time" },
+  "declarative_net_request": { "rule_resources": [] },
+  "web_accessible_resources": [{ "resources": ["blocked.html"], "matches": ["<all_urls>"] }]
+}
