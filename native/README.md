@@ -29,14 +29,14 @@ A standard child account cannot edit the installed EXE or its protected configur
 2. In **Command Prompt**, calculate the ZIP hash:
 
    ```cmd
-   certutil -hashfile GuardianPaws-Windows-v1.1.1-win-x64.zip SHA256
+   certutil -hashfile GuardianPaws-Windows-v1.1.2-win-x64.zip SHA256
    ```
 
    Compare it exactly with the published `.sha256` value.
 3. Extract the ZIP using Explorer or:
 
    ```cmd
-   tar -xf GuardianPaws-Windows-v1.1.1-win-x64.zip
+   tar -xf GuardianPaws-Windows-v1.1.2-win-x64.zip
    ```
 4. Open **Command Prompt as Administrator**, change into the extracted folder, then run:
 

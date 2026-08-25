@@ -23,6 +23,12 @@ Describe 'Guardian Paws native Windows release contract' {
         $source | Should -Match 'CryptUnprotectData\([^\r\n]+LocalMachine'
     }
 
+    It 'passes the newly entered child password to net.exe as one native argument' {
+        $source = Get-Content (Join-Path $root 'native/GuardianPaws/Program.cs') -Raw
+        $source | Should -Match 'CreateChildAccount\(child, password, display\)'
+        $source | Should -Match 'ArgumentList\.Add\(password\)'
+    }
+
     It 'keeps the executable in ProgramData and grants the child read-execute only' {
         $source = Get-Content (Join-Path $root 'native/GuardianPaws/Program.cs') -Raw
         $source | Should -Match 'CommonApplicationData'

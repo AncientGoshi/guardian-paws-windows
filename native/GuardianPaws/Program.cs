@@ -70,7 +70,7 @@ internal static class Program
         if (string.IsNullOrWhiteSpace(token)) throw new InvalidOperationException("No bot token was supplied.");
         Console.Write($"Create a password for the new child account {child}: "); var password = ReadSecret();
         if (string.IsNullOrWhiteSpace(password)) throw new InvalidOperationException("No child password was supplied.");
-        var create = Run("net.exe", $"user \"{child}\" \"{password}\" /add /expires:never /fullname:\"{display}\"");
+        var create = CreateChildAccount(child, password, display);
         if (create.ExitCode != 0) throw new InvalidOperationException("Windows could not create the child account: " + create.Output);
         try
         {
@@ -121,6 +121,17 @@ internal static class Program
         var b = new StringBuilder(); ConsoleKeyInfo k;
         while ((k = Console.ReadKey(intercept: true)).Key != ConsoleKey.Enter) { if (k.Key == ConsoleKey.Backspace && b.Length > 0) b.Length--; else if (!char.IsControl(k.KeyChar)) b.Append(k.KeyChar); }
         Console.WriteLine(); return b.ToString();
+    }
+    static (int ExitCode, string Output) CreateChildAccount(string child, string password, string display)
+    {
+        var start = new ProcessStartInfo("net.exe") { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true, CreateNoWindow = true };
+        start.ArgumentList.Add("user");
+        start.ArgumentList.Add(child);
+        start.ArgumentList.Add(password);
+        start.ArgumentList.Add("/add");
+        start.ArgumentList.Add("/expires:never");
+        start.ArgumentList.Add("/fullname:" + display);
+        return Run(start);
     }
     static string LookupSid(string name)
     {
