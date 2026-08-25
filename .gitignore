@@ -3,7 +3,8 @@ extension.pem
 extension.crx
 testResults.xml
 *.tmp
+native/**/bin/
+native/**/obj/
 
-# Revoked remote bootstrap launchers are intentionally not shipped.
+# The revoked remote PowerShell bootstrap is intentionally not shipped.
 scripts/Install-GuardianPawsFromGist.ps1
-scripts/Install-GuardianPaws.cmd
