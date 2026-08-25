@@ -29,6 +29,13 @@ Describe 'Guardian Paws native Windows release contract' {
         $source | Should -Match 'ArgumentList\.Add\(password\)'
     }
 
+    It 'keeps the Go installer secret prompts from echoing credentials' {
+        $source = Get-Content (Join-Path $root 'native-go/main_windows.go') -Raw
+        $source | Should -Match 'getConsoleInputMode'
+        $source | Should -Match 'setConsoleInputMode'
+        $source | Should -Match 'enableEchoInput'
+    }
+
     It 'keeps the executable in ProgramData and grants the child read-execute only' {
         $source = Get-Content (Join-Path $root 'native/GuardianPaws/Program.cs') -Raw
         $source | Should -Match 'CommonApplicationData'
