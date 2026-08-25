@@ -27,3 +27,11 @@ func TestParseOptions(t *testing.T) {
 		t.Fatal("options not parsed")
 	}
 }
+
+func TestRegistryPolicyBaseUsesSingleSeparators(t *testing.T) {
+	got := registryPolicyBase("S-1-5-21-123", "Microsoft\\Edge")
+	want := "HKU\\S-1-5-21-123\\Software\\Policies\\Microsoft\\Edge"
+	if got != want {
+		t.Fatalf("registry key = %q, want %q", got, want)
+	}
+}

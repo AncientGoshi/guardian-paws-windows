@@ -172,6 +172,7 @@ func uninstall() error {
 	fmt.Println("Tasks removed. Delete %ProgramData%\\GuardianPaws only after saving required pairing/configuration data.")
 	return nil
 }
+
 const enableEchoInput = 0x0004
 
 func readSecret(prompt string) (string, error) {
@@ -239,7 +240,7 @@ func readConfig() (Config, error) {
 
 func setPolicies(sid, update string, shorts bool) error {
 	for _, browser := range []string{"Microsoft\\Edge", "Google\\Chrome"} {
-		base := `HKU\` + sid + `\Software\Policies\` + browser
+		base := registryPolicyBase(sid, browser)
 		if e := mustRun("reg.exe", "add", base+`\ExtensionInstallForcelist`, "/v", "GuardianPaws1", "/t", "REG_SZ", "/d", extensionID+";"+update, "/f"); e != nil {
 			return e
 		}

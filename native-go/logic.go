@@ -61,3 +61,9 @@ func hasGuardian(ids []int64, id int64) bool {
 	}
 	return false
 }
+
+// registryPolicyBase constructs the exact registry key accepted by reg.exe.
+// Backslashes are separators, so this must contain one backslash at each boundary.
+func registryPolicyBase(sid, browser string) string {
+	return "HKU\\" + sid + "\\Software\\Policies\\" + browser
+}

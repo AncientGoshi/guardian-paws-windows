@@ -7,8 +7,8 @@ This is a pure-Go Windows replacement runtime. It intentionally coexists with
 
 Choose the ZIP that matches the Windows PC:
 
-- `GuardianPaws-Windows-Go-v1.2.0-amd64.zip` for ordinary Intel/AMD 64-bit Windows PCs.
-- `GuardianPaws-Windows-Go-v1.2.0-arm64.zip` for Windows on ARM devices.
+- `GuardianPaws-Windows-Go-v1.2.1-amd64.zip` for ordinary Intel/AMD 64-bit Windows PCs.
+- `GuardianPaws-Windows-Go-v1.2.1-arm64.zip` for Windows on ARM devices.
 
 After checking the accompanying `.sha256` file, extract the ZIP, open **Command Prompt as Administrator** in the extracted folder, then run:
 
