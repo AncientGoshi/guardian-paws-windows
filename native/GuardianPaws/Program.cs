@@ -85,13 +85,13 @@ internal static class Program
             MustRun("icacls.exe", $"\"{Root}\" /inheritance:r /grant:r \"SYSTEM:(OI)(CI)F\" \"Administrators:(OI)(CI)F\" \"{account}:(OI)(CI)RX\"");
             MustRun("icacls.exe", $"\"{ConfigPath}\" /inheritance:r /grant:r \"SYSTEM:F\" \"Administrators:F\"");
             var installedExe = Path.Combine(App, "GuardianPaws.exe");
-            CreateTask("DirectBot", "ONSTART", $"\"{installedExe}\" bot", "/RU SYSTEM /RL HIGHEST");
-            CreateTask("Enforcer", "MINUTE", $"\"{installedExe}\" enforcer", "/MO 1 /RU SYSTEM /RL HIGHEST");
+            CreateTask("DirectBot", "ONSTART", $"\"{installedExe}\" bot", "/RU", "SYSTEM", "/RL", "HIGHEST");
+            CreateTask("Enforcer", "MINUTE", $"\"{installedExe}\" enforcer", "/MO", "1", "/RU", "SYSTEM", "/RL", "HIGHEST");
             MustRun("schtasks.exe", "/Run /TN \"GuardianPaws-DirectBot\"");
             MustRun("schtasks.exe", "/Run /TN \"GuardianPaws-Enforcer\"");
             Console.WriteLine($"Installed. In a private chat with the bot, send: /pair {code}");
             Console.WriteLine("The code expires in 15 minutes and permits at most two guardian Telegram accounts.");
-            Console.WriteLine("Parent-admin recovery: Task Scheduler > \\GuardianPaws, or run Install-GuardianPaws.cmd uninstall.");
+            Console.WriteLine("Parent-admin recovery: Task Scheduler > Task Scheduler Library > GuardianPaws-DirectBot / GuardianPaws-Enforcer, or run Install-GuardianPaws.cmd uninstall.");
             return 0;
         }
         catch
@@ -100,10 +100,13 @@ internal static class Program
             throw;
         }
     }
-    static void CreateTask(string name, string schedule, string taskRun, string extra)
+    static void CreateTask(string name, string schedule, string taskRun, params string[] extra)
     {
-        var args = $"/Create /F /TN \"GuardianPaws-{name}\" /SC {schedule} {extra} /TR \"{taskRun.Replace("\"", "\\\"")}\"";
-        MustRun("schtasks.exe", args);
+        var start = new ProcessStartInfo("schtasks.exe") { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true, CreateNoWindow = true };
+        foreach (var argument in new[] { "/Create", "/F", "/TN", $"GuardianPaws-{name}", "/SC", schedule }.Concat(extra)) start.ArgumentList.Add(argument);
+        start.ArgumentList.Add("/TR");
+        start.ArgumentList.Add(taskRun);
+        MustRun(start);
     }
     static int Uninstall()
     {
@@ -181,7 +184,9 @@ internal static class Program
     static void DisableChild(string child) => MustRun("net.exe", $"user \"{child}\" /active:no");
     static void EnableChild(string child) => MustRun("net.exe", $"user \"{child}\" /active:yes");
     static (int ExitCode, string Output) Run(string file, string args) { using var p = Process.Start(new ProcessStartInfo(file, args) { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true, CreateNoWindow = true })!; var o = p.StandardOutput.ReadToEnd() + p.StandardError.ReadToEnd(); p.WaitForExit(); return (p.ExitCode, o); }
+    static (int ExitCode, string Output) Run(ProcessStartInfo start) { using var p = Process.Start(start)!; var o = p.StandardOutput.ReadToEnd() + p.StandardError.ReadToEnd(); p.WaitForExit(); return (p.ExitCode, o); }
     static void MustRun(string file, string args) { var r = Run(file, args); if (r.ExitCode != 0) throw new InvalidOperationException($"{file} failed: {r.Output}"); }
+    static void MustRun(ProcessStartInfo start) { var r = Run(start); if (r.ExitCode != 0) throw new InvalidOperationException($"{start.FileName} failed: {r.Output}"); }
 }
 internal static class Dpapi
 {
@@ -194,6 +199,6 @@ internal static class Dpapi
     public static byte[] Unprotect(byte[] value) => Transform(value, false);
     private static byte[] Transform(byte[] value, bool protect)
     {
-        var p = Marshal.AllocHGlobal(value.Length); try { Marshal.Copy(value, 0, p, value.Length); var input = new Blob { cbData = value.Length, pbData = p }; var ok = protect ? CryptProtectData(ref input, null, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, LocalMachine, out var output) : CryptUnprotectData(ref input, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, 0, out output); if (!ok) throw new InvalidOperationException("Windows DPAPI failed: " + Marshal.GetLastWin32Error()); try { var result = new byte[output.cbData]; Marshal.Copy(output.pbData, result, 0, result.Length); return result; } finally { LocalFree(output.pbData); } } finally { Marshal.FreeHGlobal(p); }
+        var p = Marshal.AllocHGlobal(value.Length); try { Marshal.Copy(value, 0, p, value.Length); var input = new Blob { cbData = value.Length, pbData = p }; var ok = protect ? CryptProtectData(ref input, null, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, LocalMachine, out var output) : CryptUnprotectData(ref input, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, LocalMachine, out output); if (!ok) throw new InvalidOperationException("Windows DPAPI failed: " + Marshal.GetLastWin32Error()); try { var result = new byte[output.cbData]; Marshal.Copy(output.pbData, result, 0, result.Length); return result; } finally { LocalFree(output.pbData); } } finally { Marshal.FreeHGlobal(p); }
     }
 }

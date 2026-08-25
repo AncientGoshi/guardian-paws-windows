@@ -12,6 +12,17 @@ Describe 'Guardian Paws native Windows release contract' {
         $source | Should -Not -Match '(?i)powershell\.exe|New-ScheduledTask|Register-ScheduledTask'
     }
 
+    It 'passes a quoted task command to schtasks as one native argument' {
+        $source = Get-Content (Join-Path $root 'native/GuardianPaws/Program.cs') -Raw
+        $source | Should -Match 'ArgumentList\.Add\(taskRun\)'
+        $source | Should -Not -Match 'taskRun\.Replace\('
+    }
+
+    It 'uses matching local-machine DPAPI scope for bot startup under SYSTEM' {
+        $source = Get-Content (Join-Path $root 'native/GuardianPaws/Program.cs') -Raw
+        $source | Should -Match 'CryptUnprotectData\([^\r\n]+LocalMachine'
+    }
+
     It 'keeps the executable in ProgramData and grants the child read-execute only' {
         $source = Get-Content (Join-Path $root 'native/GuardianPaws/Program.cs') -Raw
         $source | Should -Match 'CommonApplicationData'
